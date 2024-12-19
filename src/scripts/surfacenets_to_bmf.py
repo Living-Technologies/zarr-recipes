@@ -141,7 +141,9 @@ if __name__=="__main__":
     
     inpath = pathlib.Path(sys.argv[1])
     time_stack, transformer = loadImageStack(inpath)
+    time_stack = time_stack[0]
     tracks = {}
+    print("image shape: ", time_stack.shape)
     for tp in range(time_stack.shape[0]):
         stack = numpy.array( time_stack[tp] )
         #VTK seems to use x as the first index.     

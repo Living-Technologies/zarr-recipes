@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 
 
 import ome_zarr, zarr, ome_zarr.io, ome_zarr.writer, ome_zarr.reader
 import cellpose.models
@@ -53,7 +53,8 @@ def loadImageStack( inpth ):
             add_axis( img.metadata, {"type":"time", "name":"t"}, 0)
             np_stack = np_stack.reshape((1, *np_stack.shape[0:]))
         else:
-            np_stack = np_stack.reshape((np_stack[0], 1, *np_stack[1:]))
+            shp = np_stack.shape
+            np_stack = np_stack.reshape((shp[0], 1, *shp[1:]))
             add_axis(img.metadata, {"type":"channel", "name":"c"}, 1 )
     print(img.metadata)
     stack = [y for y in np_stack]
@@ -88,6 +89,6 @@ if __name__=="__main__":
     model = cellpose.models.CellposeModel( gpu=True, pretrained_model="cellpose-organoid3d-dna.model")
 
 
-    y = model.eval(stack, channel_axis=0, z_axis=1, do_3D = True, anisotropy= z/xy)
+    y = model.eval(stack, channel_axis=0, z_axis=1, do_3D = True,dP_smooth=3, anisotropy= z/xy)
 
     saveZarrPrediction(y[0], metadata, opth)
