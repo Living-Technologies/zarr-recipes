@@ -73,6 +73,16 @@ def loadImage(imageFile):
             channels = tags.get("channels", 1)
             data = data.reshape((frames, slices, channels, data.shape[-2], data.shape[-1]))
             data = numpy.rollaxis(data, 2, 1)
+            if "spacing" not in tags:
+                if "Step" in tags:
+                    print("step found")
+                    tags["spacing"] = tags["Step"].split()[0]
+                else:
+                    tags["spacing"] = 1.0
+                    print("step not found!");
+                    for key in tags:
+                        print(key)
+                    print(tags["Info"]["Color"])
         return data, tags
 
 def writeZarr(img, tags, path):
@@ -80,7 +90,7 @@ def writeZarr(img, tags, path):
         Creates a zarr file with spacial information derived from the provided tags.
     """
     # prepare metadata
-    print(tags)
+    #print(tags)
     pix_size_x = tags['x_resolution']
     pix_size_y = tags['y_resolution']
     pix_size_z = tags['spacing']

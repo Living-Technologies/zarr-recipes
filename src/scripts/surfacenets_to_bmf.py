@@ -149,16 +149,33 @@ if __name__=="__main__":
         #VTK seems to use x as the first index.     
         labels = numpy.unique(stack)
         for lbl in labels[1:]:
+            
+            z, y, x = numpy.where(stack==lbl)
+            lx = max(0, numpy.min(x) - 1)
+            hx = numpy.max(x) + 2
+            ly = max(0, numpy.min(y) - 1)
+            hy = numpy.max(y) + 2
+            lz = max(0, numpy.min(z) - 1)
+            hz = numpy.max(z) + 2
+            lbl_stack = stack[lz:hz, ly:hy, lx:hx]
+            lbl_stack = (lbl_stack==lbl)*1
+            print(lx, hx, ly, hy, lz, hz, "no mesh!", lbl)
+            polygons, points = getMeshes(lbl_stack)
+            
+            
+            print("points", points.shape)
+            if not points.shape:
+                print(lx, hx, ly, hy, lz, hz, "no mesh!", lbl)
+                continue
             ky = "#999999-%s"%lbl
             if ky in tracks:
                 trk = tracks[ky]
             else:
                 trk = bmf.Track(ky)
                 tracks[ky] = trk
-            
-            lbl_stack = (stack==lbl)*1
-
-            polygons, points = getMeshes(lbl_stack)
+            points[:, 0] = points[:, 0] + lz
+            points[:, 1] = points[:, 1] + ly
+            points[:, 2] = points[:, 2] + lx
             for i in range(points.shape[0]):
                 points[i] = transformer.transform(points[i])
             indexes = numpy.array(polygons)
