@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import ome_zarr, zarr, ome_zarr.io, ome_zarr.writer, ome_zarr.reader
+import ltzarr
 
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
