@@ -4,6 +4,35 @@ class MultiScale:
     """
         A single multiscale image pyramid (or just image.)
     """
+    def __init__(self, ngffImage):
+        self.axes = []
+        self.data = []
+        self.transforms = []
+        self.image = ngffImage    
+    def summary(self):
+        print("Data: %s"%(self.image.data.shape, ))
+        print("Axes: ")
+        for dim in self.image.dims:
+            unit = self.image.axes_units[dim]
+            scale = self.image.scale[dim]
+            translate = self.image.translation[dim]
+            print("  > %s( %s ) scale: %s translate: %s"%(dim, unit, scale, translate) )
+        
+    def getVolume(self, scale, time):
+        """
+            
+        """
+        pass
+    def getTransformations( self, scale ):
+        """
+        
+        """
+        pass
+        
+class RawMultiScale:
+    """
+        A single multiscale image pyramid (or just image.)
+    """
     def __init__(self, metadata, arrays):
         self.axes = []
         self.data = []
@@ -61,7 +90,27 @@ class MultiScale:
         
         """
         pass
-def loadZarr(location):
+
+def loadNgffZarr(location):
+    """
+      Loads the location zarr file.
+        
+        Params:
+          location - Path to zarr folder
+        
+        Returns:
+          metadata, array_data
+    """
+    multiscales = ngff_zarr.from_ngff_zarr(location)
+    out = []
+    for img in multiscales.images:
+        out.append(MultiScale(img))
+    return out
+
+def loadZarr( location ):
+    return loadNgffZarr(location)
+
+def loadRawZarr(location):
     """
       Loads the location zarr file.
         
@@ -76,11 +125,17 @@ def loadZarr(location):
        mode='r',
     )
     multiscales = start.attrs["multiscales"]
-    
+    print(multiscales)
     arrays = [ start[ key ] for key in start.array_keys() ]
     out = []
     for md, array in zip(multiscales, arrays):
-        out.append( MultiScale( md, array) )
+        out.append( RawMultiScale( md, array) )
         
     return out
-    
+
+#save a zarr.
+def saveZarr( location, images ):
+    multiscales = ngff_zarr.to_multiscales(images[0].image)
+    ngff_zarr.to_ngff_zarr(location, multiscales, overwrite=True, version="0.4")
+    multiscales = ngff_zarr.from_ngff_zarr(location)
+    print(multiscales)
