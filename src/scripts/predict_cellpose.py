@@ -86,9 +86,10 @@ if __name__=="__main__":
 
 
     
-    model = cellpose.models.CellposeModel( gpu=True, pretrained_model="cellpose-organoid3d-dna.model")
+    model = cellpose.models.CellposeModel( gpu=True, pretrained_model="cyto3")
 
-
-    y = model.eval(stack, channel_axis=0, z_axis=1, do_3D = True,dP_smooth=3, anisotropy= z/xy)
+    print("z ", "xy ", z, xy, stack[0].shape)
+    stack = [ s[0] for s in stack ]
+    y = model.eval(stack, z_axis=0, do_3D = True,dP_smooth=3, anisotropy= z/xy, diameter=30)
 
     saveZarrPrediction(y[0], metadata, opth)

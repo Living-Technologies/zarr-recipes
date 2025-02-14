@@ -1,5 +1,7 @@
 import zarr
 import ngff_zarr
+import numpy
+
 class MultiScale:
     """
         A single multiscale image pyramid (or just image.)
@@ -17,11 +19,13 @@ class MultiScale:
             scale = self.image.scale[dim]
             translate = self.image.translation[dim]
             print("  > %s( %s ) scale: %s translate: %s"%(dim, unit, scale, translate) )
-        
+    def getNTimePoints(self, ):
+        return self.image.data.shape[0]
     def getVolume(self, scale, time):
         """
             
         """
+        return numpy.array(self.image.data[time])
         pass
     def getTransformations( self, scale ):
         """
@@ -108,6 +112,13 @@ def loadNgffZarr(location):
     return out
 
 def loadZarr( location ):
+    """
+    Params:
+
+        location Path that will be used by ngff_zarr for loading images.
+    
+    returns List of MultiScale objects.
+    """
     return loadNgffZarr(location)
 
 def loadRawZarr(location):
@@ -134,8 +145,8 @@ def loadRawZarr(location):
     return out
 
 #save a zarr.
-def saveZarr( location, images ):
-    multiscales = ngff_zarr.to_multiscales(images[0].image)
+def saveZarr( location, image, scale_factors = []):
+    
+    multiscales = ngff_zarr.to_multiscales(image, scale_factors=scale_factors)
     ngff_zarr.to_ngff_zarr(location, multiscales, overwrite=True, version="0.4")
-    multiscales = ngff_zarr.from_ngff_zarr(location)
-    print(multiscales)
+    
