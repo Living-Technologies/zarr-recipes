@@ -6,13 +6,6 @@
 This is a test to make sure that the transforms are correct
 for multiscales.
 
-There are two version 
-
-  r = ( p + t ) * s
-  r = p*s + t
-
-## Transform is in scaled units.
-
 The coordnates represent the center of a pixel.
 The transform will transform a coordinate to "real space".
 
