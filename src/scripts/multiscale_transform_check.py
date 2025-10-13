@@ -3,8 +3,7 @@
 """
 # Multiscale transformation checks.
 
-This is a test to make sure that the transforms are correct
-for multiscales.
+This is a test to make sure that the transforms multiscales.
 
 The coordnates represent the center of a pixel.
 The transform will transform a coordinate to "real space".
@@ -39,29 +38,72 @@ Then we can solve.
 """
 
 import ngff_zarr, numpy
-import ltzarr
+
+import pytest
 
 
-def createImage():
-    arr = numpy.zeros( (3, 2, 32, 64, 64), dtype="uint8")
-    dims = ["t", "c", "z", "y", "x"]
-    scale = { "t":60, "c":1, "z":2, "y":0.35, "x":0.35 }
-    translate = { "t":0, "c":0, "z":10, "y":20, "x":30 }
-    img = ngff_zarr.ngff_image.NgffImage( arr, dims, scale=scale, translation=translate)
-    return img
+def checkTransformation( metaTransformations, expected):
+    #must contain scale as first transform v04.
+    scale = metaTransformations[0]
+    assert scale.type == "scale"
+    for a, b in zip(scale.scale, expected[0]):
+        assert a == b
+    #optional scale
+    if len(expected) == 1:
+        return
+    
+    translation = metaTransformations[1]
+    
+    assert translation.type == "translation"
+    
+    for a, b in zip(translation.translation, expected[1]):
+        assert a == b;
 
-image = createImage();
-scale_factors = [{'x':2, 'y':2, 'z':1}]
-multiscales = ngff_zarr.to_multiscales(image, scale_factors=scale_factors)
+#input
+dims = ["t", "c", "z", "y", "x"]
+scale = { "t":60, "c":1, "z":2, "y":0.35, "x":0.35 }
+translation = { "t":0, "c":0, "z":10, "y":20, "x":30 }
+scale_factors = {'x':2, 'y':2, 'z':1}
+image_shape = (3, 2, 32, 64, 64)
 
+#generation    
+arr = numpy.zeros( image_shape, dtype="uint8")    
+image = ngff_zarr.ngff_image.NgffImage( arr, dims, scale=scale, translation=translation)
+multiscales = ngff_zarr.to_multiscales(image, scale_factors=[scale_factors])
+
+#checking the values of the ngff image.
 os = multiscales.images[0].scale
 ot = multiscales.images[0].translation
 
 ns = multiscales.images[1].scale
 nt = multiscales.images[1].translation 
 
-for key in scale_factors[0]:
-    t1 = ot[key] + 0.5*(scale_factors[0][key] - 1)*os[key]
-    print(t1, nt[key], ot[key])
-    s1 = os[key]*scale_factors[0][key]
-    print(key, nt[key] == t1, ns[key] == s1)
+for key in scale_factors:
+    t1 = ot[key] + 0.5*(scale_factors[key] - 1)*os[key]
+    s1 = os[key]*scale_factors[key]
+    assert nt[key] == t1
+    assert ns[key] == s1
+
+#check values found in the metadata
+datasets = multiscales.metadata.datasets
+set0 = datasets[0]
+set1 = datasets[1]
+
+original = [ [ scale[k] for k in dims ], [translation[k] for k in dims] ]
+
+#Newly generated scale values.
+scale1 = {}
+translation1 = {}
+
+for k in dims:
+    if k in scale_factors:
+        scale1[k] = scale[k]*scale_factors[k]
+        translation1[k] = translation[k] + 0.5*( scale_factors[k] - 1)*scale[k]
+    else:
+        scale1[k] = 1
+        translation1[k] = 0
+    
+scaled = [ [ scale1[k] for k in dims ], [translation1[k] for k in dims] ]
+
+checkTransformation(set0.coordinateTransformations, original)
+checkTransformation(set1.coordinateTransformations, scaled)

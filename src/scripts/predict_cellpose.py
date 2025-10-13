@@ -3,7 +3,7 @@
 import ome_zarr, zarr, ome_zarr.io, ome_zarr.writer, ome_zarr.reader
 import cellpose.models
 import numpy
-import sys, pathlib
+import sys, pathlib    
 
 def saveZarrPrediction( listOfMasks, metadata, path ):
     
@@ -28,11 +28,21 @@ def loadImageStack( inpth ):
     """
     url = ome_zarr.io.parse_url(inpth)
     reader = ome_zarr.reader.Reader(url)
+    confusion = list(reader())
+    
+    #multiscale
     img = list(reader())[0]
+    
+    #img.data is the multi-res pyramid
+    for ds in img.data:
+        print( ds.shape )
+        
     dask_stack = img.data[0]
     np_stack = numpy.array(dask_stack)
     #both forms of saving that I use are either (time, channel, slice, y, x) or (time, slice, y, x) 
     ndim = len(np_stack.shape)
+    for md in img.metadata:
+        print( "found: " , md)
     print(img.metadata)
     if ndim == 3:
         #one channel, one frame.
@@ -74,10 +84,11 @@ if __name__=="__main__":
     opth = pathlib.Path( inpth.parent, inpth.name.replace(".zarr", "_cp-masks.zarr") )
 
     stack, metadata = loadImageStack( inpth )
-
     transformations = metadata['coordinateTransformations']
-
-    level_1 = transformations[0]
+    
+    resolution_level = 1
+    
+    level_1 = transformations[resolution_level]
 
     resolution = level_1[0]
 
@@ -86,10 +97,10 @@ if __name__=="__main__":
 
 
     
-    model = cellpose.models.CellposeModel( gpu=True, pretrained_model="cyto3")
+    model = cellpose.models.CellposeModel( gpu=True, pretrained_model=str(mdlpth))
 
-    print("z ", "xy ", z, xy, stack[0].shape)
+    print("z ", "xy ", z, xy, stack[resolution_level].shape)
     stack = [ s[0] for s in stack ]
-    y = model.eval(stack, z_axis=0, do_3D = True,dP_smooth=3, anisotropy= z/xy, diameter=30)
+    #y = model.eval(stack, z_axis=0, do_3D = True,anisotropy= z/xy, diameter=30)
 
     saveZarrPrediction(y[0], metadata, opth)

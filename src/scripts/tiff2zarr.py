@@ -94,7 +94,10 @@ def writeZarr(img, tags, path):
     pix_size_x = tags['x_resolution']
     pix_size_y = tags['y_resolution']
     pix_size_z = tags['spacing']
-    time_interval = tags['finterval']
+    if 'finterval' in tags:
+        time_interval = tags['finterval']
+    else:
+        time_interval = 1
     
     xorigin = tags.get('xorigin', 0)
     yorigin = tags.get('yorigin', 0)
