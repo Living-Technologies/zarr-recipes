@@ -25,14 +25,14 @@ class ScaleImage:
         return skimage.transform.resize(image, complete)
 
 if __name__=="__main__":
-    dask.config.set(workers=2)
+    #dask.config.set(workers=2)
     inpth = pathlib.Path(sys.argv[1])
     opth = pathlib.Path( inpth.parent, inpth.name.replace(".zarr", "_cp-masks.zarr") )
 
     ms = ngff_zarr.from_ngff_zarr(inpth)
     img = ms.images[0]
 
-    indexes = [i for i in range(3)]
+    indexes = [i for i in range(img.data.shape[0])]
 
     xy = img.scale["x"]
     z = img.scale["z"]
