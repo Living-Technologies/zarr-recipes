@@ -4,7 +4,8 @@ import ngff_zarr
 
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
-    
+import skimage
+
 import vedo
 
 import sys, pathlib, numpy
@@ -16,6 +17,11 @@ S. Frisken, “SurfaceNets for Multi-Label Segmentations with Preservation of Sh
 """
 
 class Transformer:
+    """
+        Builds a transform from the provided metadata. The default bmf format is normalized cordinates. Where the longest
+        axis goes from -0.5 to 0.5 and the other axes go from -a/2l, a/2l where l is the length of the longest axis.
+
+    """
     def __init__(self, metadata, shape):
         scale = metadata.scale
         self.dx = scale['x']
@@ -31,7 +37,6 @@ class Transformer:
         self.factors = numpy.array(( scale['z']/longest, scale['y']/longest, scale['x']/longest ))
         half_pixel = self.factors * 0.5
         self.offsets = numpy.array( (-lz/longest/2, -ly/longest/2, -lx/longest/2) ) + half_pixel
-        print(self.offsets, self.factors)
     def transform( self, pt ):
         """
             transforms img coordinates pt from z, y, x to normalized coordinates x, y, z
@@ -43,6 +48,28 @@ class ScaleTranslate:
     def __init__(self, shift, scale):
         self.factors = scale
         self.offsets = shift
+
+def paddedCrop(img, low, high):
+    cl = [0]*3
+    ch = [0]*3
+    pl = [0]*3
+    ph = [0]*3
+    for i in range(3):
+        if low[i] < 0:
+            cl[i] = 0
+            pl[i] = 1
+        else:
+            cl[i] = low[i]
+
+        if high[i] == img.shape[i]:
+            ch[i] = img.shape[i] - 1
+            ph[i] = 1
+        else:
+            ch[i] = high[i]
+
+    arr = img[cl[0]:ch[0] + 1, cl[1]:ch[1] + 1, cl[2]:ch[2] + 1]
+    pads = [(l, h) for l, h in zip(pl, ph)]
+    return numpy.pad(arr, pads)
 
 def loadImageStack( inpth ):
     """
@@ -86,6 +113,7 @@ def surfacNetsOutputToMesh(snets, transform):
     nrm.SetConsistency(True)
     nrm.SetSplitting(False)
     nrm.SetInputDataObject( snets.GetOutputDataObject(0) )
+    nrm.NonManifoldTraversalOff()
     nrm.Update()
     polys = nrm.GetOutput()
     #polys = snets.GetOutput()
@@ -107,7 +135,7 @@ if True:
     ot = None
     if len(sys.argv) > 2:
         org_stack, ot = loadImageStack(pathlib.Path(sys.argv[2]))
-
+    flying_edges=True
     for tp in range(time_stack.shape[0]):
         stack = time_stack[tp]
         print(stack.shape)
@@ -115,13 +143,12 @@ if True:
         d0 = stack.shape[0]
         d1 = stack.shape[1]
         d2 = stack.shape[2]
-        #VTK seems to use x as the first index.     
         keys = numpy.unique(stack)
 
         shapes = []
-        if org_stack is not None:
-            vol = vedo.Volume(org_stack[0], spacing=[ot.dz, ot.dy, ot.dx])
-            shapes.append(vol)
+        #if org_stack is not None:
+        #    vol = vedo.Volume(org_stack[0], spacing=[ot.dz, ot.dy, ot.dx])
+        #    shapes.append(vol)
         tracks = []
         for key in keys:
             if key == 0:
@@ -138,6 +165,12 @@ if True:
             h = yhigh - ylow + 1
             d = zhigh - zlow + 1
 
+            zc = z - zlow
+            yc = y - ylow
+            xc = x - xlow
+
+            if len(zc) == 0:
+                continue
             img = vtk.vtkImageData();
             img.SetDimensions( d, h, w )
             img.AllocateScalars(vtk.VTK_SHORT, 1)
@@ -145,11 +178,18 @@ if True:
             scalars2 = img.GetPointData().GetScalars()
             scalars2.Fill(0)
             ntuples = scalars2.GetNumberOfTuples()
-            for xi, yi, zi in zip(x, y, z):
-                index = (xi - xlow)*d*h + (yi - ylow)*d + zi - zlow
+            for xi, yi, zi in zip(xc, yc, zc):
+                index = (xi)*d*h + (yi)*d + zi
                 scalars2.SetTuple1( index, 1 )
+            snets = None
+            if flying_edges:
+                snets = vtk.vtkDiscreteFlyingEdges3D()
+            else:
+                snets = vtk.vtkSurfaceNets3D()
+                #snets.SetSmoothing(False)
+                snets.SetTriangulationStrategyToMinArea()
+                snets.SetOutputMeshTypeToTriangles()
 
-            snets = vtk.vtkSurfaceNets3D()
             snets.SetInputData(img)
             snets.Update()
 
@@ -162,6 +202,7 @@ if True:
             trk = bmf.Track("#999999_%s"%key)
             trk.addMesh(tp, mesh)
             tracks.append(trk)
+
             #polys = vedo.mesh.Mesh(op)
             #polys.shift(zlow, ylow, xlow);
             #polys.color(numpy.random.random((3,)))
