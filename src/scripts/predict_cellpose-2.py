@@ -32,7 +32,10 @@ if __name__=="__main__":
     ms = ngff_zarr.from_ngff_zarr(inpth)
     img = ms.images[0]
 
-    indexes = [i for i in range(3)]
+    first = 0
+    last = img.data.shape[0]
+
+    indexes = [i for i in range(first, last)]
 
     xy = img.scale["x"]
     z = img.scale["z"]
@@ -45,8 +48,8 @@ if __name__=="__main__":
 
     anisotropy = new_scales["z"]/new_scales["x"]
     def torchit( block_id, model=model, img=img, anisotropy=anisotropy, scaler = scaler):
-        simg = scaler.scale(numpy.array(img.data[block_id[0],0]))
-        y = model.eval( simg, z_axis=0, do_3D = True, anisotropy=anisotropy )
+        simg = scaler.scale(numpy.array(img.data[block_id[0],0:2]))
+        y = model.eval( simg, z_axis=1,channel_axis=0, do_3D = True, anisotropy=anisotropy )
         pred = numpy.expand_dims(y[0], (0, 1))
         print("shape after prediction: ", pred.shape)
         return pred
