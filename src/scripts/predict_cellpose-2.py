@@ -59,7 +59,7 @@ if __name__=="__main__":
 
     print(chunks)
 
-    out = dask.array.map_blocks( torchit, dtype="uint16", chunks = chunks )
+    out = dask.array.map_blocks( torchit, dtype="uint16", chunks = chunks, meta=numpy.array((), dtype="int16"))
     print( "out stack: ", out.shape )
 
     oi = ngff_zarr.to_ngff_image(out, dims=img.dims, translation=img.translation, scale=new_scales)
