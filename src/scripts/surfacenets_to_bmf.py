@@ -153,8 +153,9 @@ if True:
 
     if not mesh_folder.exists():
         mesh_folder.mkdir()
+    time_points = range(735, frames)
 
-    for tp in range(frames):
+    for tp in time_points:
         stack = time_stack[tp]
         print("image shape: ", stack.shape)
         keys = numpy.unique(stack)
