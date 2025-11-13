@@ -7,6 +7,7 @@ from cellpose import models
 import dask
 import sys, pathlib
 import skimage
+import os
 
 class ScaleImage:
     def __init__(self,shape, scale):
@@ -26,10 +27,21 @@ class ScaleImage:
 
 if __name__=="__main__":
     #dask.config.set(workers=2)
-    inpth = pathlib.Path(sys.argv[1])
-    opth = pathlib.Path( inpth.parent, inpth.name.replace(".zarr", "_cp-masks.zarr") )
+    storage_options = {
+        "key" : os.environ['AWS_ACCESS_KEY_ID'],
+        "secret" : os.environ['AWS_SECRET_ACCESS_KEY']
+    }
 
-    ms = ngff_zarr.from_ngff_zarr(inpth)
+    url = os.environ['AWS_S3_BUCKET']
+
+    loc = "data/6.zarr"
+    inpth = pathlib.Path(loc)
+    opth = pathlib.Path( inpth.parent, inpth.name.replace(".zarr", "_cp-masks.zarr") )
+    print("%s/%s"%(url, opth))
+
+    out_store = zarr.storage.FsspecStore.from_url("%s/%s"%(url, opth), storage_options = storage_options )
+    ms = ngff_zarr.from_ngff_zarr("%s/%s"%(url, loc), storage_options=storage_options)
+
     img = ms.images[0]
 
     first = 0
@@ -66,4 +78,4 @@ if __name__=="__main__":
     print("multiscales")
     next_ms = ngff_zarr.to_multiscales( oi, cache=False, chunks=(1, 1, *img.data.shape[2:]) )
     print("writing")
-    ngff_zarr.to_ngff_zarr( opth, next_ms, overwrite=False )
+    ngff_zarr.to_ngff_zarr( out_store, next_ms, overwrite=False )
