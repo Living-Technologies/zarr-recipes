@@ -24,6 +24,8 @@ class ScaleImage:
 
         return skimage.transform.resize(image, complete)
 
+inline = False
+
 if __name__=="__main__":
     #dask.config.set(workers=2)
     inpth = pathlib.Path(sys.argv[1])
@@ -32,8 +34,12 @@ if __name__=="__main__":
     ms = ngff_zarr.from_ngff_zarr(inpth)
     img = ms.images[0]
 
+    if inline:
+        data = dask.array.from_zarr(pathlib.Path(inpth, ms.metadata.datasets[0].path ), inline = True)
+    else:
+        data = img.data
     first = 0
-    last = img.data.shape[0]
+    last = data.shape[0]
 
     indexes = [i for i in range(first, last)]
 
@@ -41,14 +47,15 @@ if __name__=="__main__":
     z = img.scale["z"]
 
     scaler = ScaleImage( img.data.shape, (z, xy, xy) ) #scale to 1um
-
+    print("scales: ", xy, z)
     new_scales = {"t":1, "c":1, "z":1.0, "y":1.0, "x":1.0}
 
     model = models.CellposeModel( gpu=True )
 
     anisotropy = new_scales["z"]/new_scales["x"]
-    def torchit( block_id, model=model, img=img, anisotropy=anisotropy, scaler = scaler):
-        simg = scaler.scale(numpy.array(img.data[block_id[0],0:2]))
+    def torchit( block_id, model=model, data=data, anisotropy=anisotropy, scaler = scaler):
+        print("processing block: ", block_id)
+        simg = scaler.scale(numpy.array(data[block_id[0], 3:4]))
         y = model.eval( simg, z_axis=1,channel_axis=0, do_3D = True, anisotropy=anisotropy )
         pred = numpy.expand_dims(y[0], (0, 1))
         print("shape after prediction: ", pred.shape)

@@ -8,6 +8,7 @@ import dask
 import sys, pathlib
 import skimage
 import os
+import zarr
 
 class ScaleImage:
     def __init__(self,shape, scale):

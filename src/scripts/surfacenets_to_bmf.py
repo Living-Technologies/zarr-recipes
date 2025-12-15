@@ -6,7 +6,7 @@ import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 import skimage
 
-DISPLAY=False
+DISPLAY=True
 try:
     import vedo
 except:
@@ -146,7 +146,7 @@ if True:
     ot = None
     if len(sys.argv) > 2:
         org_stack, ot = loadImageStack(pathlib.Path(sys.argv[2]))
-    flying_edges=True
+    flying_edges=False
     frames = time_stack.shape[0]
 
     mesh_folder = pathlib.Path( inpath.parent, "%s_sn"%inpath.name.replace(".zarr", "") )
@@ -209,7 +209,7 @@ if True:
                 snets = vtk.vtkDiscreteFlyingEdges3D()
             else:
                 snets = vtk.vtkSurfaceNets3D()
-                snets.SetSmoothing(False)
+                snets.SetSmoothing(True)
                 snets.SetTriangulationStrategyToMinArea()
                 snets.SetOutputMeshTypeToTriangles()
 
