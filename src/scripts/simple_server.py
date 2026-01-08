@@ -3,6 +3,7 @@
 from flask import Flask, Response, send_from_directory, send_file
 import pathlib
 import markdown
+
 import sys
 import io
 import zipfile
@@ -14,9 +15,33 @@ rootPath = None
 zarrName = None
 
 winSlashes = False
+
+htmlDoc = """
+<!DOCTYPE HTML>
+<html>
+ <head>
+   <title>%s</title>
+   <link rel="stylesheet" href="style.css"/>
+
+</head>
+<body>
+%s
+</body>
+</html>
+"""
+
 @app.route('/<path:path>')
 def mark_down( path ):
     if zarrZip is None:
+        if str(path).endswith(".md"):
+            rp = pathlib.Path(rootPath, path)
+
+            nme = rp.name.replace(".md", ".html")
+            html = None
+            with rp.open(mode="r") as md:
+                html = htmlDoc%(nme, markdown.markdown( md.read(), extensions=["tables"] ) )
+
+            return send_file( io.BytesIO(html.encode("UTF8")), download_name = nme, mimetype="text/html" )
         return send_from_directory(rootPath, path)
     else:
         try:
@@ -30,7 +55,7 @@ def mark_down( path ):
             name = path.split("/")[-1]
             return send_file(
                      data,
-                     download_name='name',
+                     download_name=name,
                      mimetype='application/octet-stream'
                )
         except:
