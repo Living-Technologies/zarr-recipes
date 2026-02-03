@@ -52,13 +52,13 @@ if __name__=="__main__":
     model = models.CellposeModel( gpu=True )
 
     anisotropy = new_scales["z"]/new_scales["x"]
+
     def torchit( block_id, model=model, data=data, anisotropy=anisotropy, scaler = scaler):
-        print("processing block: ", block_id)
-        print(data.shape)
-        simg = scaler.scale(numpy.array(data[block_id[0], 0]))
+        #get scale version of image.
+        simg = scaler.scale(numpy.array(data[block_id[0]]))
         y = model.eval( simg, z_axis=1,channel_axis=0, do_3D = True, anisotropy=anisotropy )
+        #recover the time axis
         pred = numpy.expand_dims(y[0], (0, 1))
-        print("shape after prediction: ", pred.shape)
         return pred
 
     print("preparing")
