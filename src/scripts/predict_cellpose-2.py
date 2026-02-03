@@ -21,7 +21,6 @@ class ScaleImage:
         n_dims = image.ndim
         leave = n_dims - 3
         complete = (*image.shape[0:leave], *self.out_shape)
-
         return skimage.transform.resize(image, complete)
 
 inline = False
@@ -55,7 +54,8 @@ if __name__=="__main__":
     anisotropy = new_scales["z"]/new_scales["x"]
     def torchit( block_id, model=model, data=data, anisotropy=anisotropy, scaler = scaler):
         print("processing block: ", block_id)
-        simg = scaler.scale(numpy.array(data[block_id[0], 3:4]))
+        print(data.shape)
+        simg = scaler.scale(numpy.array(data[block_id[0], 0]))
         y = model.eval( simg, z_axis=1,channel_axis=0, do_3D = True, anisotropy=anisotropy )
         pred = numpy.expand_dims(y[0], (0, 1))
         print("shape after prediction: ", pred.shape)
