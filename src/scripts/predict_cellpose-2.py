@@ -55,7 +55,7 @@ def loadTiffData(fname):
 
     def torchit( block_id, model=model, data=data, anisotropy=anisotropy, scaler = scaler):
         #get scale version of image.
-        simg = scaler.scale(numpy.array(data[block_id[0]]))
+        simg = scaler.scale(numpy.array(data[block_id[0]][0:2]))
         y = model.eval( simg, z_axis=1,channel_axis=0, do_3D = True, anisotropy=anisotropy )
         #recover the time axis
         pred = numpy.expand_dims(y[0], (0, 1))
