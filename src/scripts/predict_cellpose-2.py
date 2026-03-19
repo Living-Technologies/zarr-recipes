@@ -35,6 +35,7 @@ def loadTiffData(fname):
     tf = tifffile.TiffFile(fname)
     data = tf.asarray()
     data = numpy.rollaxis(data, 2, 1)
+    print("in shape: ", data.shape)
     md = tf.imagej_metadata
     first = 0
     last = data.shape[0]
@@ -54,6 +55,7 @@ def loadTiffData(fname):
     anisotropy = new_scales["z"]/new_scales["x"]
 
     def torchit( block_id, model=model, data=data, anisotropy=anisotropy, scaler = scaler):
+
         #get scale version of image.
         simg = scaler.scale(numpy.array(data[block_id[0]][0:2]))
         y = model.eval( simg, z_axis=1,channel_axis=0, do_3D = True, anisotropy=anisotropy )
@@ -71,7 +73,7 @@ def loadTiffData(fname):
 
     oi = ngff_zarr.to_ngff_image(out, dims=[d for d in new_scales], translation=translation, scale=new_scales)
     print("multiscales")
-    next_ms = ngff_zarr.to_multiscales( oi, cache=False, chunks=(1, 1, *data.shape[2:]) )
+    next_ms = ngff_zarr.to_multiscales( oi, cache=False, chunks=(1, 1, *scaler.getOutputShape()) )
     print("writing")
     ngff_zarr.to_ngff_zarr( opth, next_ms, overwrite=False )
 def loadZarrData(fname):
